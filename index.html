@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Research Command Center</title>
+    <script>
+      (function () {
+        var KEY = 'coachForgeThemeMode.v1';
+        var mode = 'system';
+        try {
+          var stored = localStorage.getItem(KEY);
+          if (stored === 'light' || stored === 'dark' || stored === 'system') mode = stored;
+        } catch (_err) {}
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var resolved = mode === 'system' ? (prefersDark ? 'dark' : 'light') : mode;
+        document.documentElement.setAttribute('data-theme-mode', mode);
+        document.documentElement.setAttribute('data-theme', resolved);
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="topbar">
+        <div class="brand">
+          <a class="brand-link" href="#overview" aria-label="CoachForge Home">
+            <span class="brand-icon" aria-hidden="true">
+              <svg class="cf-mark" viewBox="0 0 72 72">
+                <rect class="base" x="6" y="6" width="60" height="60" rx="14"></rect>
+                <rect class="stitch" x="10" y="10" width="52" height="52" rx="11"></rect>
+                <path class="monogram" d="M43 24H33c-5 0-8 3-8 8v8c0 5 3 8 8 8h10"></path>
+                <path class="monogram" d="M47 23v26M47 29h12M47 38h9"></path>
+                <path class="accent" d="M14 18h12"></path>
+                <circle class="accent-dot" cx="56" cy="54" r="2.5"></circle>
+              </svg>
+            </span>
+            <span class="brand-wordmark">
+              <span class="brand-name">CoachForge</span>
+              <span class="brand-subtitle">Human + AI Team Coaching Systems for Weekly Performance Loops</span>
+            </span>
+          </a>
+        </div>
+        <label class="week-select-label" for="activeWeekSelect">Active Week</label>
+        <select id="activeWeekSelect" aria-label="Active Week Selector"></select>
+        <label class="week-select-label" for="themeSelect">Theme</label>
+        <select id="themeSelect" aria-label="Theme Selector">
+          <option value="system">System</option>
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+        <div id="storageStatus" aria-live="polite">LOCAL: OK</div>
+      </header>
+
+      <div id="layout">
+        <aside id="sidebar">
+          <a class="brand-link brand-link--sidebar" href="#overview" aria-label="CoachForge Home">
+            <span class="brand-icon" aria-hidden="true">
+              <svg class="cf-mark" viewBox="0 0 72 72">
+                <rect class="base" x="6" y="6" width="60" height="60" rx="14"></rect>
+                <rect class="stitch" x="10" y="10" width="52" height="52" rx="11"></rect>
+                <path class="monogram" d="M43 24H33c-5 0-8 3-8 8v8c0 5 3 8 8 8h10"></path>
+                <path class="monogram" d="M47 23v26M47 29h12M47 38h9"></path>
+                <path class="accent" d="M14 18h12"></path>
+                <circle class="accent-dot" cx="56" cy="54" r="2.5"></circle>
+              </svg>
+            </span>
+            <span class="brand-wordmark">
+              <span class="brand-name">CoachForge</span>
+              <span class="brand-subtitle">Ops</span>
+            </span>
+          </a>
+          <nav>
+            <a href="#overview" aria-label="Overview">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M3 11.5L12 4l9 7.5"></path>
+                  <path d="M5 10.5V20h14v-9.5"></path>
+                  <path d="M10 20v-5h4v5"></path>
+                </svg>
+              </span>
+              <span class="nav-label">Overview</span>
+            </a>
+            <a href="#reading" aria-label="Reading">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17.5H6.5A2.5 2.5 0 0 0 4 23z"></path>
+                  <path d="M4 5.5v15A2.5 2.5 0 0 1 6.5 18H20"></path>
+                </svg>
+              </span>
+              <span class="nav-label">Reading</span>
+            </a>
+            <a href="#weekly" aria-label="Weekly">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                  <path d="M3 10h18"></path>
+                  <path d="M8 3v4M16 3v4"></path>
+                </svg>
+              </span>
+              <span class="nav-label">Weekly</span>
+            </a>
+            <a href="#prompts" aria-label="Prompts">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 6h16v10H9l-5 4z"></path>
+                  <path d="M8 10h8M8 13h5"></path>
+                </svg>
+              </span>
+              <span class="nav-label">Prompts</span>
+            </a>
+            <a href="#experiments" aria-label="Experiments">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M9 3h6"></path>
+                  <path d="M10 3v5L5 19a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 19L14 8V3"></path>
+                  <path d="M8 14h8"></path>
+                </svg>
+              </span>
+              <span class="nav-label">Experiments</span>
+            </a>
+            <a href="#links" aria-label="Links">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M10 13.5l4-4"></path>
+                  <path d="M7 16.5l-2 2a3 3 0 0 1-4-4l4-4a3 3 0 0 1 4 0"></path>
+                  <path d="M17 7.5l2-2a3 3 0 0 1 4 4l-4 4a3 3 0 0 1-4 0"></path>
+                </svg>
+              </span>
+              <span class="nav-label">Links</span>
+            </a>
+          </nav>
+          <button id="sidebarToggle" data-action="sidebar-toggle" type="button">Collapse</button>
+        </aside>
+
+        <main id="main">
+          <section id="overview"></section>
+          <section id="reading"></section>
+          <section id="weekly"></section>
+          <section id="prompts"></section>
+          <section id="experiments"></section>
+          <section id="links"></section>
+        </main>
+      </div>
+    </div>
+
+    <div id="toastHost" aria-live="polite" aria-atomic="true"></div>
+    <div id="modalHost"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
