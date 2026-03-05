@@ -21,6 +21,7 @@ const MODEL_OPTIONS = ['GPT-4.1', 'GPT-5', 'Claude Sonnet', 'Gemini', 'Other'];
 const SOURCE_STATUSES = ['Not started', 'Unread', 'In Progress', 'Synthesized', 'Archived'];
 const WEEK_STATUSES = ['Planned', 'Active', 'Done'];
 const WEEK_RANGE = [5, 6, 7, 8, 9, 10, 11];
+const READING_SORT_OPTIONS = ['manual', 'relatedWeek', 'title', 'author', 'status', 'updatedAt'];
 const SEARCH_FILTER_TO_SECTION = {
   readingSearch: 'reading',
   promptSearch: 'prompts',
@@ -134,7 +135,7 @@ function defaultFilters() {
     reading: {
       query: '',
       status: 'All',
-      tag: 'All',
+      week: 'All',
       keyOnly: false,
       sort: 'updatedAt'
     },
@@ -157,15 +158,27 @@ function clampWeek(week, fallback = 5) {
   return WEEK_RANGE.includes(n) ? n : fallback;
 }
 
+function normalizeWeekFilter(week) {
+  if (String(week || 'All') === 'All') return 'All';
+  return WEEK_RANGE.includes(Number(week)) ? String(Number(week)) : 'All';
+}
+
+function normalizeReadingSort(sort) {
+  return READING_SORT_OPTIONS.includes(sort) ? sort : 'updatedAt';
+}
+
 function normalizeFilters(filters) {
   const defaults = defaultFilters();
   if (!filters || typeof filters !== 'object') return defaults;
 
   if (filters.reading || filters.prompts || filters.experiments) {
+    const reading = filters.reading || {};
     return {
       reading: {
         ...defaults.reading,
-        ...(filters.reading || {})
+        ...reading,
+        week: normalizeWeekFilter(reading.week ?? reading.tag ?? defaults.reading.week),
+        sort: normalizeReadingSort(reading.sort ?? defaults.reading.sort)
       },
       prompts: {
         ...defaults.prompts,
@@ -183,9 +196,9 @@ function normalizeFilters(filters) {
     reading: {
       query: filters.readingSearch || '',
       status: filters.readingStatus || 'All',
-      tag: filters.readingTag || 'All',
+      week: normalizeWeekFilter(filters.readingWeek ?? filters.readingTag ?? 'All'),
       keyOnly: !!filters.readingKeyOnly,
-      sort: filters.readingSort || 'updatedAt'
+      sort: normalizeReadingSort(filters.readingSort || 'updatedAt')
     },
     prompts: {
       query: filters.promptSearch || '',
@@ -699,7 +712,7 @@ function getFilterValue(filterKey) {
   const map = {
     readingSearch: f.reading.query,
     readingStatus: f.reading.status,
-    readingTag: f.reading.tag,
+    readingWeek: f.reading.week,
     readingKeyOnly: f.reading.keyOnly,
     readingSort: f.reading.sort,
     promptSearch: f.prompts.query,
@@ -717,9 +730,9 @@ function setFilterValue(filterKey, value) {
   const f = state.uiState.filters;
   if (filterKey === 'readingSearch') f.reading.query = String(value || '');
   if (filterKey === 'readingStatus') f.reading.status = String(value || 'All');
-  if (filterKey === 'readingTag') f.reading.tag = String(value || 'All');
+  if (filterKey === 'readingWeek') f.reading.week = normalizeWeekFilter(value);
   if (filterKey === 'readingKeyOnly') f.reading.keyOnly = !!value;
-  if (filterKey === 'readingSort') f.reading.sort = String(value || 'updatedAt');
+  if (filterKey === 'readingSort') f.reading.sort = normalizeReadingSort(String(value || 'updatedAt'));
   if (filterKey === 'promptSearch') f.prompts.query = String(value || '');
   if (filterKey === 'promptModel') f.prompts.model = String(value || 'All');
   if (filterKey === 'promptWeek') f.prompts.week = String(value || 'All');
@@ -736,8 +749,8 @@ function queueSectionRender(section) {
   debouncedRenderers[section]();
 }
 
-function sourceTagOptions() {
-  return ['All', ...new Set(state.readingLibrary.flatMap((s) => s.tags))].filter(Boolean);
+function sourceWeekOptions() {
+  return ['All', ...WEEK_RANGE];
 }
 
 function promptTagOptions() {
@@ -842,11 +855,14 @@ function filteredReading() {
     const hay = `${s.title} ${s.author} ${s.notes}`.toLowerCase();
     if (f.query && !hay.includes(f.query.toLowerCase())) return false;
     if (f.status !== 'All' && s.status !== f.status) return false;
-    if (f.tag !== 'All' && !s.tags.includes(f.tag)) return false;
+    if (f.week !== 'All' && String(s.relatedWeek) !== String(f.week)) return false;
     if (f.keyOnly && !s.isKey) return false;
     return true;
   });
   if (f.sort === 'manual') return filtered;
+  if (f.sort === 'relatedWeek') {
+    return filtered.sort((a, b) => a.relatedWeek - b.relatedWeek || a.title.localeCompare(b.title));
+  }
   return filtered.sort((a, b) => {
     const key = f.sort;
     const av = (a[key] || '').toString().toLowerCase();
@@ -858,7 +874,7 @@ function filteredReading() {
 function renderReading() {
   const f = state.uiState.filters.reading;
   const rows = filteredReading();
-  const tags = sourceTagOptions();
+  const weeks = sourceWeekOptions();
 
   readingEl.innerHTML = `
     <h2 class="section-title">Reading Library</h2>
@@ -866,31 +882,33 @@ function renderReading() {
       <button type="button" data-action="reading-add">Add Source</button>
       <input type="text" placeholder="Search title/author/notes" value="${escapeAttr(f.query)}" data-filter="readingSearch" />
       <select data-filter="readingStatus">${['All', ...SOURCE_STATUSES].map((s) => `<option ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
-      <select data-filter="readingTag">${tags.map((t) => `<option ${f.tag === t ? 'selected' : ''}>${t}</option>`).join('')}</select>
+      <select data-filter="readingWeek">${weeks.map((w) => `<option value="${w}" ${String(f.week) === String(w) ? 'selected' : ''}>${w === 'All' ? 'All weeks' : `Week ${w}`}</option>`).join('')}</select>
       <label class="pill"><input type="checkbox" data-filter="readingKeyOnly" ${f.keyOnly ? 'checked' : ''}/> Key Only</label>
       <select data-filter="readingSort">
-        ${['manual', 'title', 'author', 'status', 'updatedAt'].map((k) => `<option value="${k}" ${f.sort === k ? 'selected' : ''}>Sort: ${k}</option>`).join('')}
+        <option value="manual" ${f.sort === 'manual' ? 'selected' : ''}>Sort: manual</option>
+        <option value="relatedWeek" ${f.sort === 'relatedWeek' ? 'selected' : ''}>Sort: week 5-11</option>
+        <option value="title" ${f.sort === 'title' ? 'selected' : ''}>Sort: title</option>
+        <option value="author" ${f.sort === 'author' ? 'selected' : ''}>Sort: author</option>
+        <option value="status" ${f.sort === 'status' ? 'selected' : ''}>Sort: status</option>
+        <option value="updatedAt" ${f.sort === 'updatedAt' ? 'selected' : ''}>Sort: updated</option>
       </select>
     </div>
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Move</th><th>Title</th><th>Author</th><th>Link</th><th>Tags</th><th>Status</th><th>Key</th><th>Actions</th></tr>
+          <tr><th>Move</th><th>Title</th><th>Author</th><th>Link</th><th>Week Tag</th><th>Status</th><th>Key</th><th>Actions</th></tr>
         </thead>
         <tbody>
           ${rows
             .map((s) => {
               const expanded = !!state.uiState.expandedRows.reading[s.id];
-              const tagPills = s.tags
-                .map((t) => `<span class="patch">${escapeHtml(t)} <button type="button" data-action="reading-remove-tag" data-id="${s.id}" data-tag="${escapeAttr(t)}">x</button></span>`)
-                .join('');
               return `
                 <tr data-drop-type="reading" data-drop-id="${s.id}">
                   <td><button class="drag-grip" type="button" draggable="true" data-drag-type="reading" data-drag-id="${s.id}" aria-label="Reorder source">::</button></td>
                   ${inlineCell('reading', s.id, 'title', s.title, 'text')}
                   ${inlineCell('reading', s.id, 'author', s.author, 'text')}
                   ${inlineCell('reading', s.id, 'url', s.url, 'url')}
-                  ${inlineCell('reading', s.id, 'tags', s.tags.join(', '), 'tags')}
+                  ${inlineCell('reading', s.id, 'relatedWeek', String(s.relatedWeek), 'select', WEEK_RANGE.map(String))}
                   ${inlineCell('reading', s.id, 'status', s.status, 'select', SOURCE_STATUSES)}
                   ${inlineCell('reading', s.id, 'isKey', s.isKey ? 'Yes' : 'No', 'toggle')}
                   <td>
@@ -899,7 +917,6 @@ function renderReading() {
                       <button type="button" data-action="reading-edit" data-id="${s.id}">Edit</button>
                       <button type="button" data-action="reading-delete" data-id="${s.id}">Delete</button>
                     </div>
-                    <div>${tagPills}</div>
                   </td>
                 </tr>
                 ${expanded ? `<tr class="expanded-notes" data-drop-type="reading" data-drop-id="${s.id}"><td colspan="8"><strong>Notes:</strong> ${escapeHtml(s.notes || 'No notes')}</td></tr>` : ''}
@@ -1400,7 +1417,6 @@ function openReadingModal(item = null) {
       title: '',
       author: '',
       url: '',
-      tags: [],
       status: SOURCE_STATUSES[0],
       notes: '',
       isKey: false,
@@ -1416,14 +1432,13 @@ function openReadingModal(item = null) {
       <form class="modal-grid" data-form="reading">
         <div class="modal-grid two">
           <label>URL* <input name="url" value="${escapeAttr(source.url)}" ${isNew ? 'required' : ''} /></label>
-          <label>Related Week* <select name="relatedWeek">${WEEK_RANGE.map((w) => `<option value="${w}" ${w === clampWeek(source.relatedWeek, state.uiState.activeWeek) ? 'selected' : ''}>${w}</option>`).join('')}</select></label>
+          <label>Week Tag* <select name="relatedWeek">${WEEK_RANGE.map((w) => `<option value="${w}" ${w === clampWeek(source.relatedWeek, state.uiState.activeWeek) ? 'selected' : ''}>${w}</option>`).join('')}</select></label>
         </div>
         <div class="action-row">
           <button type="button" data-action="source-autofill">Auto-fill</button>
         </div>
         <label>Title <input name="title" value="${escapeAttr(source.title)}" /></label>
         <label>Author <input name="author" value="${escapeAttr(source.author)}" /></label>
-        <label>Tags (comma separated) <input name="tags" value="${escapeAttr(source.tags.join(', '))}" /></label>
         <label>Status <select name="status">${SOURCE_STATUSES.map((s) => `<option ${s === source.status ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
         <label>Key <select name="isKey"><option value="false" ${!source.isKey ? 'selected' : ''}>No</option><option value="true" ${source.isKey ? 'selected' : ''}>Yes</option></select></label>
         <label>Accessed Date <input type="date" name="accessedDate" value="${escapeAttr((source.accessedDate || source.createdAt || nowISO()).slice(0, 10))}" /></label>
@@ -1447,7 +1462,6 @@ function openReadingModal(item = null) {
         source.title = title;
         source.author = (fd.get('author') || '').toString();
         source.url = url;
-        source.tags = parseTags((fd.get('tags') || '').toString());
         source.status = (fd.get('status') || SOURCE_STATUSES[0]).toString();
         source.isKey = fd.get('isKey') === 'true';
         source.notes = (fd.get('notes') || '').toString();
@@ -1813,16 +1827,6 @@ function handleActionClick(action, target, event) {
       },
       null
     );
-    return;
-  }
-
-  if (action === 'reading-remove-tag') {
-    const source = state.readingLibrary.find((r) => r.id === target.dataset.id);
-    if (!source) return;
-    commit(() => {
-      source.tags = source.tags.filter((t) => t !== target.dataset.tag);
-      ensureUpdated(source);
-    }, 'Tag removed');
     return;
   }
 
