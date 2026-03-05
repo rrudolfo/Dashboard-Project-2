@@ -1,0 +1,104 @@
+---
+import '../styles/global.css';
+
+import {
+  renderActiveWeekControl,
+  renderExperimentSection,
+  renderLinksSection,
+  renderModalHost,
+  renderOverviewSection,
+  renderPromptSection,
+  renderReadingSection,
+  renderStorageStatus,
+  renderWeeklySection
+} from '../lib/dashboard-render.js';
+import { loadDashboardState } from '../lib/dashboard-state.js';
+
+const state = await loadDashboardState();
+const canImportLegacy = !!state._meta?.allowLegacyImport;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Research Command Center</title>
+    <script defer src="https://unpkg.com/htmx.org@2.0.8"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.15.8/dist/cdn.min.js"></script>
+    <script is:inline>
+      (function () {
+        var KEY = 'coachForgeThemeMode.v1';
+        var mode = 'system';
+        try {
+          var stored = localStorage.getItem(KEY);
+          if (stored === 'light' || stored === 'dark' || stored === 'system') mode = stored;
+        } catch (_err) {}
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var resolved = mode === 'system' ? (prefersDark ? 'dark' : 'light') : mode;
+        document.documentElement.setAttribute('data-theme-mode', mode);
+        document.documentElement.setAttribute('data-theme', resolved);
+      })();
+    </script>
+  </head>
+  <body x-data={`dashboardApp(${JSON.stringify({ canImportLegacy })})`} x-init="init()">
+    <div id="app">
+      <header id="topbar">
+        <div class="brand">
+          <a class="brand-link" href="#overview" aria-label="CoachForge Home">
+            <span class="brand-wordmark">
+              <span class="brand-name">CoachForge</span>
+              <span class="brand-subtitle">Human + AI Team Coaching Systems for Weekly Performance Loops</span>
+            </span>
+          </a>
+        </div>
+        <Fragment set:html={renderActiveWeekControl(state)} />
+        <label class="week-select-label" for="themeSelect">Theme</label>
+        <select id="themeSelect" aria-label="Theme Selector">
+          <option value="system">System</option>
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+        <button id="manualImportButton" type="button">Import Backup</button>
+        <input id="manualImportFile" type="file" accept="application/json" hidden />
+        <Fragment set:html={renderStorageStatus(state)} />
+      </header>
+
+      <div id="layout">
+        <aside id="sidebar">
+          <a class="brand-link brand-link--sidebar" href="#overview" aria-label="CoachForge Home">
+            <span class="brand-wordmark">
+              <span class="brand-name">CoachForge</span>
+              <span class="brand-subtitle">Ops</span>
+            </span>
+          </a>
+          <nav>
+            <a href="#overview" aria-label="Overview"><span class="nav-label">Overview</span></a>
+            <a href="#reading" aria-label="Reading"><span class="nav-label">Reading</span></a>
+            <a href="#weekly" aria-label="Weekly"><span class="nav-label">Weekly</span></a>
+            <a href="#prompts" aria-label="Prompts"><span class="nav-label">Prompts</span></a>
+            <a href="#experiments" aria-label="Experiments"><span class="nav-label">Experiments</span></a>
+            <a href="#links" aria-label="Links"><span class="nav-label">Links</span></a>
+          </nav>
+          <button id="sidebarToggle" type="button" @click="toggleSidebar()" x-text="sidebarCollapsed ? 'Expand' : 'Collapse'"></button>
+        </aside>
+
+        <main id="main">
+          <Fragment set:html={renderOverviewSection(state)} />
+          <Fragment set:html={renderReadingSection(state)} />
+          <Fragment set:html={renderWeeklySection(state)} />
+          <Fragment set:html={renderPromptSection(state)} />
+          <Fragment set:html={renderExperimentSection(state)} />
+          <Fragment set:html={renderLinksSection(state)} />
+        </main>
+      </div>
+    </div>
+
+    <div id="toastHost" aria-live="polite" aria-atomic="true"></div>
+    <Fragment set:html={renderModalHost()} />
+
+    <script type="module">
+      import '../scripts/app.js';
+    </script>
+  </body>
+</html>

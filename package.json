@@ -1,0 +1,16 @@
+{
+  "name": "dashboard-project-2",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CoachForge dashboard refactored to the AHA stack.",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.5.4",
+    "astro": "^5.18.0"
+  }
+}

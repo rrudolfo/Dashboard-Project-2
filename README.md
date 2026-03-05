@@ -1,57 +1,47 @@
 # CoachForge Research Command Center
 
-Static **HTML + CSS + Vanilla JS** dashboard for running Human + AI coaching research loops and weekly execution reviews.
+CoachForge is being refactored from a local-only vanilla JS dashboard into an AHA stack app using Astro, htmx, and Alpine.js.
 
-## What this app is
-CoachForge is a local-first “Research Ops” command center for:
-- Translating elite sports culture into business-ready weekly performance loops.
-- Tracking standards, signals, prompts, experiments, and links in one place.
-- Running the flow: **Standards -> Signals -> Dashboard -> Weekly Review**.
-- Supporting the AI loop: **Capture -> Detect Patterns -> Nudge -> Review -> Adjust**.
+## Current state
+- The new app shell lives in `src/` and uses Astro server rendering with HTML partial updates.
+- Shared dashboard schema, seeding, hydration, and persistence live in `src/lib/dashboard-state.js`.
+- Section and modal rendering live in `src/lib/dashboard-render.js`.
+- htmx mutation routes live in `src/pages/api/dashboard.ts`.
+- Legacy import lives in `src/pages/api/import-legacy.ts`.
+- The main Astro page lives in `src/pages/index.astro`.
+- Existing root files (`index.html`, `app.js`, `styles.css`) are still present as the legacy implementation and data reference.
 
-## Key features
-- Neo-90s NFL-inspired dark/light UI with a sticky top bar and sticky left sidebar.
-- Sidebar collapse/expand with icon-only collapsed mode.
-- Fully local data persistence via `localStorage`.
-- Corruption recovery path with automatic reseed and warning banner.
-- Project Overview editor with draggable goals.
-- Reading Library with:
-  - Inline edit + full modal edit
-  - Add by URL with metadata autofill (best-effort)
-  - Search/filter/sort/key-only controls
-  - Expandable notes rows
-  - Drag-and-drop reordering
-- Weekly Plan cards for weeks 5–11 with milestones, progress bars, and single-active-week enforcement.
-- Prompt Log with inline + modal editing, related sources, copy prompt, filters, and drag reorder.
-- Experiment Log with expandable cards, notes, image URL thumbnails/fallback, filters, and drag reorder.
-- Links section with add/edit/delete.
-- Reusable modal system, confirm dialog, and toast notifications.
+## Data preservation
+The original browser data key is still:
+- `retroCoachResearchDashboard.v1`
 
-## Persistence
-App state is stored under:
-- `retroCoachResearchDashboard.v1` (main dashboard state)
-- `coachForgeThemeMode.v1` (theme preference: `system|dark|light`)
+Theme preference key:
+- `coachForgeThemeMode.v1`
 
-Data is loaded from storage if valid. Seed/demo data is only used when storage is empty or invalid.
+The Astro app preserves the same dashboard shape and supports a legacy import path:
+- Same-origin auto import from existing `localStorage` when possible.
+- Manual backup import from the new app via the `Import Backup` button.
 
-## File structure
-- `index.html` - app shell and static layout containers
-- `styles.css` - full theme and component styling
-- `app.js` - state, rendering, events, persistence, modal/forms, drag-and-drop
+## Important limitation
+This machine is currently extremely low on disk space. During the migration, Astro build verification was blocked because a required dependency (`shiki`) could not be restored after cleanup without hitting `ENOSPC`. Some older root files also intermittently time out on read because of the filesystem state.
 
-## Run locally
-No build step required.
+That means the source refactor is present in the repo, but the app has not been fully reverified end to end on this machine yet.
 
-1. Clone this repo.
-2. Open `index.html` directly in a browser.
+## Run after freeing disk space
+1. Free additional disk space.
+2. Run `npm install`.
+3. Run `npm run dev`.
+4. Open the Astro app in the browser and import legacy data if the auto-import path does not trigger.
 
-Tip: use a modern Chromium/Safari/Firefox browser for best drag-and-drop behavior.
+## File layout
+- `src/pages/index.astro` - Astro page shell
+- `src/pages/api/dashboard.ts` - htmx mutation endpoint
+- `src/pages/api/import-legacy.ts` - legacy import endpoint
+- `src/pages/fragments/modal.ts` - modal fragment endpoint
+- `src/lib/dashboard-state.js` - schema, seed data, persistence
+- `src/lib/dashboard-render.js` - server-rendered sections and modals
+- `src/scripts/app.js` - thin client behavior
+- `src/styles/global.css` - migrated styling
 
-## Interaction shortcuts
-- Inline tables: click a cell to edit, `Enter` to save, `Esc` to cancel, blur to save.
-- Modals: `Esc` closes, overlay click closes, focus is trapped inside dialog.
-- Drag reorder: use the `::` drag grips in Goals, Reading, Prompts, and Experiments.
-
-## Notes
-- URL metadata autofill depends on `fetch()` and may be blocked by CORS on some sites.
-- All data remains local to the browser profile unless you export/copy manually.
+## Legacy app
+If you still need to inspect the original local-only implementation, the previous static files remain at the repo root.
