@@ -505,6 +505,7 @@ function normalizeWeekNumber(week) {
   const n = Number(week);
   if (WEEK_RANGE.includes(n)) return n;
   if (n >= 5 && n <= 10) return n - 4;
+  if (n === 11) return LAST_WEEK;
   return null;
 }
 
@@ -687,6 +688,34 @@ function validateState(candidate) {
   const weeks = new Set((candidate?.weeklyPlan || []).map((w) => normalizeWeekNumber(w.weekNumber)).filter(Boolean));
   const hasWeekRange = WEEK_RANGE.every((w) => weeks.has(w));
   return !!(hasOverview && hasArrays && hasUi && hasWeekRange);
+}
+
+function canRecoverState(candidate) {
+  if (!candidate || typeof candidate !== 'object') return false;
+
+  const hasOverview = candidate.projectOverview && typeof candidate.projectOverview === 'object';
+  const hasUi = candidate.uiState && typeof candidate.uiState === 'object';
+  const hasAnyCollections =
+    Array.isArray(candidate.readingLibrary) ||
+    Array.isArray(candidate.weeklyPlan) ||
+    Array.isArray(candidate.promptLog) ||
+    Array.isArray(candidate.experimentLog) ||
+    Array.isArray(candidate.links);
+
+  return !!(hasOverview && hasUi && hasAnyCollections);
+}
+
+function coerceStateCandidate(candidate) {
+  return {
+    projectOverview: candidate?.projectOverview && typeof candidate.projectOverview === 'object' ? candidate.projectOverview : {},
+    readingLibrary: Array.isArray(candidate?.readingLibrary) ? candidate.readingLibrary : [],
+    weeklyPlan: Array.isArray(candidate?.weeklyPlan) ? candidate.weeklyPlan : [],
+    promptLog: Array.isArray(candidate?.promptLog) ? candidate.promptLog : [],
+    experimentLog: Array.isArray(candidate?.experimentLog) ? candidate.experimentLog : [],
+    links: Array.isArray(candidate?.links) ? candidate.links : [],
+    uiState: candidate?.uiState && typeof candidate.uiState === 'object' ? candidate.uiState : {},
+    _meta: candidate?._meta && typeof candidate._meta === 'object' ? candidate._meta : {}
+  };
 }
 
 function hydrateState(candidate) {
@@ -1031,6 +1060,14 @@ function loadState() {
   }
 
   const parsed = safeParse(raw);
+  if (parsed && canRecoverState(parsed)) {
+    const recovered = applyLegacyStaticContent(hydrateState(coerceStateCandidate(parsed)));
+    if (validateState(recovered)) {
+      saveState(recovered, { silent: true });
+      return recovered;
+    }
+  }
+
   if (!parsed || typeof parsed !== 'object' || !validateState(parsed)) {
     dataIssueDetected = true;
     try {
