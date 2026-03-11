@@ -36,8 +36,13 @@ body {
   min-height: 100%;
 }
 
+html {
+  width: 100%;
+}
+
 body {
   margin: 0;
+  width: 100%;
   color: var(--ink);
   background:
     radial-gradient(circle at 20% -10%, rgba(20, 184, 166, 0.1), transparent 35%),
@@ -58,6 +63,14 @@ body {
     linear-gradient(180deg, #030712 0%, #0b1220 100%);
   font-family: var(--font-sans);
   line-height: 1.45;
+}
+
+img,
+svg,
+canvas,
+video,
+iframe {
+  max-width: 100%;
 }
 
 h1,
@@ -97,9 +110,10 @@ a:hover {
   top: 0;
   z-index: 40;
   display: grid;
-  grid-template-columns: 1fr auto auto auto auto auto;
+  grid-template-columns: minmax(0, 1fr) repeat(5, auto);
   gap: 12px;
   align-items: center;
+  width: 100%;
   padding: 14px 20px;
   border-bottom: 1px solid var(--border);
   background:
@@ -236,6 +250,7 @@ html[data-theme="light"] #topbar {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  min-width: 0;
 }
 
 #activeWeekSelect,
@@ -312,6 +327,7 @@ a:focus-visible {
 
 #storageStatus {
   justify-self: end;
+  max-width: 100%;
   background: #0a111d;
   color: #cbd5e1;
   padding: 5px 10px;
@@ -370,12 +386,15 @@ html[data-theme="light"] #storageStatus {
   min-height: calc(100vh - var(--topbar-height));
   min-height: calc(100dvh - var(--topbar-height));
   align-items: start;
+  min-width: 0;
+  width: 100%;
 }
 
 #sidebar {
   position: sticky;
   top: var(--topbar-height);
   align-self: start;
+  min-width: 0;
   height: calc(100vh - var(--topbar-height));
   height: calc(100dvh - var(--topbar-height));
   overflow-y: auto;
@@ -408,6 +427,7 @@ html[data-theme="light"] #sidebar {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 #sidebar .brand-link--sidebar {
@@ -438,6 +458,7 @@ html[data-theme="light"] #sidebar {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   text-decoration: none;
   color: #cbd5e1;
   border: 1px solid #2f3b4d;
@@ -526,7 +547,8 @@ html[data-theme="light"] #sidebar a .nav-icon {
 
 .nav-label {
   line-height: 1;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 #sidebarToggle {
@@ -579,17 +601,21 @@ html[data-theme="light"] #sidebar a .nav-icon {
 
 #main {
   min-width: 0;
+  width: 100%;
   padding: 24px;
   display: grid;
   gap: 16px;
 }
 
 section {
+  min-width: 0;
+  width: 100%;
   background: linear-gradient(180deg, rgba(17, 24, 39, 0.92), rgba(15, 23, 42, 0.92));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 10px 18px -16px var(--shadow);
   padding: 16px;
+  scroll-margin-top: var(--topbar-height);
 }
 
 html[data-theme="light"] section {
@@ -600,6 +626,7 @@ html[data-theme="light"] section {
   position: relative;
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
   padding: 5px 12px;
   margin-bottom: 12px;
   border-radius: 999px;
@@ -609,6 +636,8 @@ html[data-theme="light"] section {
   font-size: 1rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 html[data-theme="light"] .section-title {
@@ -632,12 +661,15 @@ html[data-theme="light"] .section-title {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
   border: 1px dashed #64748b;
   border-radius: 999px;
   padding: 3px 9px;
   font-size: 0.75rem;
   color: #dbe4ef;
   background: rgba(30, 41, 59, 0.78);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 html[data-theme="light"] .pill,
@@ -666,6 +698,7 @@ html[data-theme="light"] .badge {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .loop-stepper .pill {
@@ -681,7 +714,9 @@ html[data-theme="light"] .badge {
 }
 
 .kpi {
+  flex: 1 1 142px;
   min-width: 142px;
+  max-width: 100%;
   border: 1px solid #3f4c5f;
   border-radius: var(--radius-sm);
   padding: 10px 12px;
@@ -705,6 +740,7 @@ html[data-theme="light"] .kpi {
   color: #f8fafc;
   font-size: 1.02rem;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 html[data-theme="light"] .kpi .label {
@@ -721,14 +757,27 @@ html[data-theme="light"] .kpi .value {
   align-items: center;
 }
 
+.table-toolbar > *,
+.controls > *,
+.inline-row > *,
+.week-actions > *,
+.cards > *,
+.links-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .table-wrap {
+  max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid #334155;
   border-radius: 10px;
 }
 
 table {
   width: 100%;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 0.84rem;
   background: rgba(15, 23, 42, 0.85);
@@ -748,6 +797,8 @@ td {
   padding: 8px 9px;
   vertical-align: top;
   color: #dbe4ef;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 th {
@@ -823,6 +874,7 @@ html[data-theme="light"] .patch {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
 }
 
 .drag-grip {
@@ -892,8 +944,19 @@ html[data-theme="light"] .ref-flag {
 
 .goal-item {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 6px 0;
+  min-width: 0;
+}
+
+.goal-item > * {
+  min-width: 0;
+}
+
+.goal-item input[type="text"],
+.goal-item input:not([type="checkbox"]) {
+  flex: 1 1 220px;
 }
 
 .overview-edit {
@@ -905,11 +968,13 @@ html[data-theme="light"] .ref-flag {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
   gap: 12px;
+  min-width: 0;
 }
 
 .week-card,
 .exp-card,
 .link-card {
+  min-width: 0;
   border: 1px solid #3f4c5f;
   border-radius: var(--radius-sm);
   padding: 12px;
@@ -945,6 +1010,7 @@ html[data-theme="light"] .progress {
 .card-preview {
   color: var(--muted);
   font-size: 0.84rem;
+  overflow-wrap: anywhere;
 }
 
 .card-details {
@@ -974,10 +1040,12 @@ html[data-theme="light"] .thumb {
   display: grid;
   gap: 8px;
   z-index: 70;
+  width: min(320px, calc(100vw - 24px));
 }
 
 .toast {
-  min-width: 190px;
+  min-width: 0;
+  width: 100%;
   border: 1px solid #475569;
   border-left: 3px solid var(--team-accent);
   border-radius: 10px;
@@ -1018,6 +1086,7 @@ html[data-theme="light"] .toast {
 
 .modal {
   width: min(760px, 96vw);
+  max-width: 100%;
   max-height: 92vh;
   overflow: auto;
   border: 1px solid #475569;
@@ -1045,6 +1114,7 @@ html[data-theme="light"] .modal h3 {
 .modal-grid {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .modal-grid.two {
@@ -1056,6 +1126,7 @@ html[data-theme="light"] .modal h3 {
   gap: 4px;
   font-size: 0.8rem;
   color: #cbd5e1;
+  min-width: 0;
 }
 
 html[data-theme="light"] .modal label {
@@ -1134,6 +1205,10 @@ html[data-theme="light"] .drag-grip {
   #storageStatus {
     justify-self: start;
   }
+
+  #topbar {
+    padding: 12px 14px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1157,5 +1232,54 @@ html[data-theme="light"] .drag-grip {
 
   .modal-grid.two {
     grid-template-columns: 1fr;
+  }
+
+  .goal-item input[type="text"],
+  .goal-item input:not([type="checkbox"]) {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  #topbar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  #topbar > * {
+    min-width: 0;
+  }
+
+  .brand-link {
+    width: 100%;
+  }
+
+  .brand-subtitle {
+    overflow-wrap: anywhere;
+  }
+
+  #activeWeekSelect,
+  #themeSelect,
+  #storageStatus,
+  #sidebarToggle,
+  .table-toolbar > button:first-child,
+  .controls > button:first-child {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .kpi {
+    min-width: 0;
+  }
+
+  .week-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-toolbar,
+  .controls,
+  .inline-row,
+  .modal-actions {
+    align-items: stretch;
   }
 }

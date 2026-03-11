@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'retroCoachResearchDashboard.v1';
 const THEME_STORAGE_KEY = 'coachForgeThemeMode.v1';
+const INVALID_BACKUP_STORAGE_KEY = `${STORAGE_KEY}.invalidBackup`;
 
 const appEl = document.getElementById('app');
 const topbarEl = document.getElementById('topbar');
@@ -20,13 +21,353 @@ const linksEl = document.getElementById('links');
 const MODEL_OPTIONS = ['GPT-4.1', 'GPT-5', 'Claude Sonnet', 'Gemini', 'Other'];
 const SOURCE_STATUSES = ['Not started', 'Unread', 'In Progress', 'Synthesized', 'Archived'];
 const WEEK_STATUSES = ['Planned', 'Active', 'Done'];
-const WEEK_RANGE = [5, 6, 7, 8, 9, 10, 11];
+const WEEK_RANGE = [1, 2, 3, 4, 5, 6];
 const READING_SORT_OPTIONS = ['manual', 'relatedWeek', 'title', 'author', 'status', 'updatedAt'];
 const SEARCH_FILTER_TO_SECTION = {
   readingSearch: 'reading',
   promptSearch: 'prompts',
   experimentSearch: 'experiments'
 };
+const DEFAULT_WEEK = WEEK_RANGE[0];
+const LAST_WEEK = WEEK_RANGE[WEEK_RANGE.length - 1];
+const LEGACY_STATIC_CONTENT_VERSION = 'pages-study-plan-reading-v1';
+const LEGACY_WEEKLY_PLAN_TITLE = '6-Week Study Plan (8 Hrs/Week)';
+const LEGACY_READING_LOG_TITLE = 'Reading Log';
+const LEGACY_STUDY_PLAN_ACTIVE_WEEK = 5;
+const LEGACY_MOCK_READING_URLS = new Set([
+  'https://example.com/winning-culture',
+  'https://example.com/patterns',
+  'https://example.com/habit-loops',
+  'https://example.com/metrics',
+  'https://example.com/behavior',
+  'https://example.com/playbook-rhythm'
+]);
+const LEGACY_READING_LOG_ENTRIES = [
+  {
+    relatedWeek: 1,
+    title: 'Wooden on Leadership',
+    url: 'https://www.kingsmaker.co/blog/book-summary-wooden-on-leadership',
+    notes: 'Level 1-4 of the Pyramid: Focus on "Industriousness" and "Enthusiasm" as measurable cornerstones.'
+  },
+  {
+    relatedWeek: 1,
+    title: 'Model of Team Learning',
+    url: 'https://dash.harvard.edu/entities/publication/13a7b031-0fdd-45ec-a7e0-2b80e2bc679f',
+    notes: 'Full Paper: Focus on the "Model of Team Learning" and how psychological safety mediates between structure and performance.'
+  },
+  {
+    relatedWeek: 1,
+    title: 'Bill Belichick New England Patriots Strategy NFL Super Bowl LIII',
+    url: 'https://www.theguardian.com/sport/2019/jan/29/bill-belichick-new-england-patriots-strategy-nfl-super-bowl-liii',
+    notes: `Article: "The brilliance is in the timing" - Belichick's refusal to wed himself to one philosophy and his use of "market inefficiencies".`
+  },
+  {
+    relatedWeek: 1,
+    title: "Guardiola's Strict Rules at Manchester City",
+    url: 'https://www.youtube.com/shorts/M0CFVSDad9Y',
+    notes: "Video: Guardiola's Strict Rules at Manchester City"
+  },
+  {
+    relatedWeek: 2,
+    title: 'The Culture Code Summary',
+    url: 'https://www.shortform.com/summary/the-culture-code-summary-daniel-coyle',
+    notes: 'Part 1, Chapter 6: Focus on "Belonging Cues" (Connection, Future, and Security) as behavioral signals.'
+  },
+  {
+    relatedWeek: 2,
+    title: 'Bill Walsh The Score Takes Care of Itself',
+    url: 'https://preprocessor.blog/bill-walsh-the-score-takes-care-of-itself',
+    notes: '"The Standard of Performance" section: Focus on Walsh\'s list of 15 attitudes and the "Enforced Little Things" like professionalism and technical precision.'
+  },
+  {
+    relatedWeek: 2,
+    title: 'Collective Efficacy, Group Potency, and Group Performance',
+    url: 'https://www.researchgate.net/publication/24434875_Collective_Efficacy_Group_Potency_and_Group_Performance_Meta-Analyses_of_Their_Relationships_and_Test_of_a_Mediation_Model',
+    notes: 'Abstract/Results: Note the mediation model showing collective efficacy as a stronger predictor of performance than potency for high interdependence.'
+  },
+  {
+    relatedWeek: 3,
+    title: 'Performance Appraisal and Performance Management',
+    url: 'https://www.semanticscholar.org/paper/Performance-Appraisal%2C-Performance-Management-and-A-Denisi-Pritchard/59eefbbfede708294463a8de6449b2ffd819c7ea',
+    notes: 'Motivational Framework: Focus on the distinction between performance appraisal (measurement) and performance management (improvement).'
+  },
+  {
+    relatedWeek: 3,
+    title: 'Thinking in Systems',
+    url: 'https://research.fit.edu/media/site-specific/researchfitedu/coast-climate-adaptation-library/climate-communications/psychology-amp-behavior/Meadows-2008.-Thinking-in-Systems.pdf',
+    notes: 'Part 2, Chapter 6: "Leverage Points - Places to Intervene in a System" and the logic of balancing vs. reinforcing feedback loops.'
+  },
+  {
+    relatedWeek: 3,
+    title: 'Pep Guardiola and the Half-Spaces',
+    url: 'https://archive.trainingground.guru/articles/pep-guardiola-and-the-half-spaces',
+    notes: 'Tactical Analysis: How Guardiola uses "halbraum" and positional play to create numerical superiority and "dilemmas" for the opponent.'
+  },
+  {
+    relatedWeek: 4,
+    title: 'The Leadership Secrets of Nick Saban',
+    url: 'https://www.shortform.com/pdf/the-leadership-secrets-of-nick-saban-pdf-john-talty',
+    notes: 'Chapter 7 ("The Process"): Breaking down mammoth tasks into manageable daily components and "What\'s Important Now" (WIN).'
+  },
+  {
+    relatedWeek: 4,
+    title: "What Got You Here Won't Get You There",
+    url: "https://cdn.bookey.app/files/pdf/book/en/what-got-you-here-won't-get-you-there.pdf",
+    notes: 'Chapter 4 ("The Twenty Habits"): Identifying the behavioral blind spots that hinder successful people, such as "Adding Too Much Value".'
+  },
+  {
+    relatedWeek: 4,
+    title: 'How Habits are Formed (Lally et al. 2010)',
+    url: 'https://discovery.ucl.ac.uk/id/eprint/10144814/1/23311908.2022.pdf',
+    notes: 'Full Paper: Focus on the asymptotic habit growth curve and the average timeframe (66 days) to reach a plateau of automaticity.'
+  },
+  {
+    relatedWeek: 5,
+    title: 'Leaders Eat Last',
+    url: 'https://thepowermoves.com/leaders-eat-last/',
+    notes: 'Part 1 & 2: Focus on "The Circle of Safety" and the "EDSO" (Endorphins, Dopamine, Serotonin, Oxytocin) neurochemical model.'
+  },
+  {
+    relatedWeek: 5,
+    title: 'High Performance Habits',
+    url: 'https://cdn.bookey.app/files/pdf/book/en/high-performance-habits.pdf',
+    notes: 'Chapters 1 & 4: "Seek Clarity" (identifying identity/values) and "Increase Productivity" (separating important tasks from drudgery).'
+  },
+  {
+    relatedWeek: 5,
+    title: 'Tony Robbins Coaching Model',
+    url: 'https://jdmeier.com/tony-robbins-coaching-model/',
+    notes: 'The Triad & RPM: Focus on the "Triad" of Physiology, Focus, and Language, and the "Rapid Planning Method" for goal alignment.'
+  }
+];
+const LEGACY_WEEKLY_PLAN_ENTRIES = [
+  {
+    weekNumber: 1,
+    status: 'Done',
+    owner: 'Riley',
+    objective: 'I will define culture as measurable behaviors and set up my research + build system.',
+    tasks: [
+      {
+        text: 'Build Milanote board structure (Research / Coaches / Culture Mechanics / AI System / Final)',
+        milestone: '5 boards live'
+      },
+      {
+        text: 'Extract 10-12 observable behaviors from Wooden + Edmondson',
+        milestone: 'Behavior Taxonomy v1 (1 page)'
+      },
+      {
+        text: 'Create Culture Mechanics template (Standards / Habits / Consequences / Feedback Loops)',
+        milestone: 'template card'
+      },
+      {
+        text: 'Coach snapshots: Belichick + Guardiola (4-5 enforced behaviors each)',
+        milestone: '2 coach cards'
+      },
+      {
+        text: 'Create evidence capture system (citation notes + quote log)',
+        milestone: 'Reading Response template'
+      }
+    ],
+    timeBudget: 'Research 3.5 | Production 2.5 | Documentation 1.5 | Buffer 0.5',
+    aiCollaboration:
+      '"From these notes, list 12 observable behaviors (no values) with a measurable signal for each." Iteration: 1 draft -> I prune to 10-12 -> AI reformats into taxonomy table.',
+    scopeBoundaries: [
+      'NOT adding more than 2 coaches',
+      'NOT building dashboards or polished visuals',
+      'NOT writing paper paragraphs (notes only)'
+    ],
+    contingency: 'If readings are dense -> I use AI summaries + extract only "behavior -> signal" pairs.'
+  },
+  {
+    weekNumber: 2,
+    status: 'Done',
+    owner: 'Riley',
+    objective: 'I will build a simple "Culture Physics" framework linking behaviors to outcomes.',
+    tasks: [
+      {
+        text: 'Read/summarize 2 practitioner sources (Coyle + Walsh)',
+        milestone: '2 reading responses'
+      },
+      {
+        text: 'Build Culture Physics v1 with 3 mechanisms (feedback loops / accountability triggers / alignment protocols)',
+        milestone: 'framework card'
+      },
+      {
+        text: 'Build Behavior -> Outcome map (6-8 linkages)',
+        milestone: 'map table'
+      },
+      {
+        text: 'Start Ritual Library: 6-8 rituals total across Wooden / Belichick / Guardiola',
+        milestone: 'Ritual Library v1'
+      },
+      {
+        text: 'Add "business translation" layer: 5 KPIs <-> sports equivalents',
+        milestone: 'KPI bridge table'
+      }
+    ],
+    timeBudget: 'Research 3.5 | Production 3.0 | Documentation 1.0 | Buffer 0.5',
+    aiCollaboration:
+      '"Given these sources, propose 3 core mechanisms that explain performance culture. Provide: mechanism -> definition -> observable signals." Iteration: AI proposes 5 -> I select 3 -> AI tightens wording + adds signals.',
+    scopeBoundaries: [
+      'NOT adding new coaches',
+      'NOT validating with case studies',
+      'NOT building the final blueprint yet'
+    ],
+    contingency: 'If time collapses -> I do 1 source deep + 1 source summary and still produce the 3-mechanism framework.'
+  },
+  {
+    weekNumber: 3,
+    status: 'Done',
+    owner: 'Riley',
+    objective: 'I will design the AI "physics engine" logic: how it listens, interprets, and nudges.',
+    tasks: [
+      {
+        text: 'Map data flow diagram (inputs -> processing -> outputs) in Milanote/Mermaid/hand sketch',
+        milestone: '1 diagram'
+      },
+      {
+        text: 'Write 2 logic specs (no code): Pattern Detection / Nudge Generation',
+        milestone: '2 one-page specs'
+      },
+      {
+        text: 'Build Dashboard mockup v1 (Culture Health / Standards) in Canva/Figma',
+        milestone: '1 screen'
+      },
+      {
+        text: 'Tool scan: compare Humanyze + Polly.ai (what signals they capture)',
+        milestone: 'feature table'
+      },
+      {
+        text: 'Draft Metric Definitions for 6 taxonomy behaviors (signal, threshold, risk)',
+        milestone: 'metric card set'
+      }
+    ],
+    timeBudget: 'Research 1.5 | Production 5.0 | Documentation 1.0 | Buffer 0.5',
+    aiCollaboration:
+      '"Write a 200-word logic flow for detecting pattern drift from meeting notes + attendance logs. Output as steps + inputs/outputs." Iteration: 1 draft -> I add constraints (privacy, false positives) -> AI revises.',
+    scopeBoundaries: [
+      'NOT writing executable code',
+      'NOT building multiple dashboards',
+      'NOT doing real data collection'
+    ],
+    contingency: 'If mockups take too long -> I use annotated hand sketches and ship them as "v1".'
+  },
+  {
+    weekNumber: 4,
+    status: 'Done',
+    owner: 'Riley',
+    objective: 'I will integrate coach practices into the model and define where humans retain authority.',
+    tasks: [
+      {
+        text: 'Add coach: Nick Saban (2-hour focused extraction)',
+        milestone: 'Saban coach card'
+      },
+      {
+        text: 'Build Coach Practice Matrix: 4 coaches x 5 culture mechanics = 20 cells',
+        milestone: 'matrix table'
+      },
+      {
+        text: 'Map 8 practices -> AI functions (2 per coach)',
+        milestone: 'mapping table'
+      },
+      {
+        text: 'Add "Leadership Authority Gate" rules (what AI cannot decide)',
+        milestone: 'guardrails card'
+      },
+      {
+        text: 'Blueprint skeleton sketch: 3 layers combined',
+        milestone: 'Blueprint v0'
+      }
+    ],
+    timeBudget: 'Research 2.5 | Production 4.0 | Documentation 1.0 | Buffer 0.5',
+    aiCollaboration:
+      '"Convert these coach practices into measurable routines and map each to an AI feature: capture -> interpret -> feedback." Iteration: AI generates 12 mappings -> I keep 8 -> AI rewrites as clean table.',
+    scopeBoundaries: [
+      'NOT adding more coaches',
+      'NOT polishing visuals',
+      'NOT expanding feature set beyond "listen -> surface -> nudge -> review"'
+    ],
+    contingency: 'If Saban sourcing is thin -> I use one high-signal book excerpt + one media interview and document gaps explicitly.'
+  },
+  {
+    weekNumber: 5,
+    status: 'Active',
+    owner: 'Riley',
+    objective: 'I will build the CoachForge Bootstrap website v1 that presents the operating manual as a dashboard tool.',
+    tasks: [
+      {
+        text: 'Finalize site map + navigation (6 pages)',
+        milestone: 'Sitemap card + nav structure'
+      },
+      {
+        text: 'Build Bootstrap site skeleton (layout + shared navbar/footer + responsive grid)',
+        milestone: 'Working site v1'
+      },
+      {
+        text: 'Create core pages (content pulled from Weeks 1-4 artifacts)',
+        milestone: 'Core pages drafted'
+      },
+      {
+        text: 'Add sample data (fake team week) to make dashboard feel real',
+        milestone: 'tables + badges'
+      },
+      {
+        text: 'Write microcopy (tooltips, labels, "what this means")',
+        milestone: 'UI text pass'
+      }
+    ],
+    timeBudget: 'Production 6.0 | Documentation 1.0 | Research 0.5 | Buffer 0.5',
+    aiCollaboration:
+      '"Convert these artifacts into website copy: headings + 1-2 sentence explanations per card. Keep it scannable." Iteration: draft copy -> I edit tone -> AI tightens for cards/tooltips.',
+    scopeBoundaries: [
+      'NOT building a backend',
+      'NOT real integrations',
+      'NOT adding new pages/features beyond the 6-page plan'
+    ],
+    contingency: 'If build time runs long -> ship 3-page MVP (Home + Dashboard + Winning Loop) and leave others as placeholders.'
+  },
+  {
+    weekNumber: 6,
+    status: 'Planned',
+    owner: 'Riley',
+    objective: 'I will finalize and package the CoachForge Bootstrap website as a portfolio-ready deliverable.',
+    tasks: [
+      {
+        text: 'Polish UI consistency (spacing, headings, cards/tables/badges)',
+        milestone: 'design pass'
+      },
+      {
+        text: 'Finalize Dashboard vFinal (sample week data + alerts + simple trends)',
+        milestone: 'dashboard complete'
+      },
+      {
+        text: 'Finalize Blueprint section inside the site (diagram + callouts)',
+        milestone: 'blueprint live'
+      },
+      {
+        text: 'Add How to Use page section (weekly workflow + roles: leader/team/AI)',
+        milestone: 'user guide'
+      },
+      {
+        text: 'Package deliverables: README + screenshots + exports',
+        milestone: 'submission bundle'
+      },
+      {
+        text: 'Optional: 2-3 min walkthrough (Loom or slides)',
+        milestone: 'walkthrough asset'
+      }
+    ],
+    timeBudget: 'Production 6.0 | Documentation 1.5 | Buffer 0.5 | Research 0',
+    aiCollaboration:
+      '"Tighten this page copy to be scannable + consistent with product tone." "Write a short README for this Bootstrap site (run locally + overview)."',
+    scopeBoundaries: [
+      'NOT adding new features/pages',
+      'NOT implementing real-time data integrations',
+      'NOT redesigning from scratch'
+    ],
+    contingency: 'If polish runs long -> prioritize nav + dashboard + winning loop + how-to-use; everything else becomes vNext.'
+  }
+];
 
 let state = null;
 let dataIssueDetected = false;
@@ -106,6 +447,13 @@ function parseTags(str) {
   return [...new Set(str.split(',').map((t) => t.trim()).filter(Boolean))];
 }
 
+function splitLines(text) {
+  return String(text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 function formatDate(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -153,14 +501,25 @@ function defaultFilters() {
   };
 }
 
-function clampWeek(week, fallback = 5) {
+function normalizeWeekNumber(week) {
   const n = Number(week);
-  return WEEK_RANGE.includes(n) ? n : fallback;
+  if (WEEK_RANGE.includes(n)) return n;
+  if (n >= 5 && n <= 10) return n - 4;
+  return null;
+}
+
+function clampWeek(week, fallback = DEFAULT_WEEK) {
+  const n = Number(week);
+  if (WEEK_RANGE.includes(n)) return n;
+  if (n >= 5 && n <= 10) return n - 4;
+  if (n === 11) return LAST_WEEK;
+  return fallback;
 }
 
 function normalizeWeekFilter(week) {
   if (String(week || 'All') === 'All') return 'All';
-  return WEEK_RANGE.includes(Number(week)) ? String(Number(week)) : 'All';
+  const normalized = clampWeek(week, Number.NaN);
+  return WEEK_RANGE.includes(normalized) ? String(normalized) : 'All';
 }
 
 function normalizeReadingSort(sort) {
@@ -182,11 +541,13 @@ function normalizeFilters(filters) {
       },
       prompts: {
         ...defaults.prompts,
-        ...(filters.prompts || {})
+        ...(filters.prompts || {}),
+        week: normalizeWeekFilter(filters.prompts?.week ?? defaults.prompts.week)
       },
       experiments: {
         ...defaults.experiments,
-        ...(filters.experiments || {})
+        ...(filters.experiments || {}),
+        week: normalizeWeekFilter(filters.experiments?.week ?? defaults.experiments.week)
       }
     };
   }
@@ -203,18 +564,18 @@ function normalizeFilters(filters) {
     prompts: {
       query: filters.promptSearch || '',
       model: filters.promptModel || 'All',
-      week: filters.promptWeek || 'All',
+      week: normalizeWeekFilter(filters.promptWeek || 'All'),
       tag: filters.promptTag || 'All'
     },
     experiments: {
       query: filters.experimentSearch || '',
-      week: filters.experimentWeek || 'All',
+      week: normalizeWeekFilter(filters.experimentWeek || 'All'),
       tag: filters.experimentTag || 'All'
     }
   };
 }
 
-function normalizeSource(source, fallbackWeek = 5) {
+function normalizeSource(source, fallbackWeek = DEFAULT_WEEK) {
   const createdAt = source.createdAt || nowISO();
   const status = SOURCE_STATUSES.includes(source.status) ? source.status : 'Not started';
   return {
@@ -235,18 +596,33 @@ function normalizeSource(source, fallbackWeek = 5) {
 
 function normalizeWeek(week) {
   const createdAt = week.createdAt || nowISO();
+  const weekNumber = normalizeWeekNumber(week.weekNumber);
+  if (!weekNumber) return null;
   return {
     id: week.id || uid(),
     createdAt,
     updatedAt: week.updatedAt || createdAt,
-    weekNumber: clampWeek(week.weekNumber, 5),
+    weekNumber,
     status: WEEK_STATUSES.includes(week.status) ? week.status : 'Planned',
     owner: week.owner || '',
+    planTitle: week.planTitle || LEGACY_WEEKLY_PLAN_TITLE,
+    objective: week.objective || '',
+    tasks: Array.isArray(week.tasks)
+      ? week.tasks.map((task) => ({
+          id: task.id || uid(),
+          text: task.text || '',
+          milestone: task.milestone || ''
+        }))
+      : [],
     milestones: Array.isArray(week.milestones)
       ? week.milestones.map((m) => ({ id: m.id || uid(), text: m.text || '', done: !!m.done }))
       : [],
     deliverables: week.deliverables || '',
-    risks: week.risks || ''
+    risks: week.risks || '',
+    timeBudget: week.timeBudget || '',
+    aiCollaboration: week.aiCollaboration || '',
+    scopeBoundaries: Array.isArray(week.scopeBoundaries) ? week.scopeBoundaries.filter(Boolean) : splitLines(week.scopeBoundaries || ''),
+    contingency: week.contingency || ''
   };
 }
 
@@ -263,7 +639,7 @@ function normalizePrompt(entry) {
     outputSummary: entry.outputSummary || '',
     changedNext: entry.changedNext || '',
     tags: Array.isArray(entry.tags) ? entry.tags : parseTags(String(entry.tags || '')),
-    relatedWeek: clampWeek(entry.relatedWeek, 5),
+    relatedWeek: clampWeek(entry.relatedWeek, DEFAULT_WEEK),
     relatedSourceIds: Array.isArray(entry.relatedSourceIds) ? entry.relatedSourceIds : []
   };
 }
@@ -283,7 +659,7 @@ function normalizeExperiment(entry) {
     imageUrls: Array.isArray(entry.imageUrls) ? entry.imageUrls : [],
     notes: entry.notes || '',
     tags: Array.isArray(entry.tags) ? entry.tags : parseTags(String(entry.tags || '')),
-    relatedWeek: clampWeek(entry.relatedWeek, 5)
+    relatedWeek: clampWeek(entry.relatedWeek, DEFAULT_WEEK)
   };
 }
 
@@ -308,16 +684,17 @@ function validateState(candidate) {
     Array.isArray(candidate?.experimentLog) &&
     Array.isArray(candidate?.links);
   const hasUi = candidate?.uiState && typeof candidate.uiState === 'object';
-  const weeks = new Set((candidate?.weeklyPlan || []).map((w) => Number(w.weekNumber)));
+  const weeks = new Set((candidate?.weeklyPlan || []).map((w) => normalizeWeekNumber(w.weekNumber)).filter(Boolean));
   const hasWeekRange = WEEK_RANGE.every((w) => weeks.has(w));
   return !!(hasOverview && hasArrays && hasUi && hasWeekRange);
 }
 
 function hydrateState(candidate) {
   const filters = normalizeFilters(candidate.uiState?.filters);
-  const activeWeek = clampWeek(candidate.uiState?.activeWeek, 5);
+  const activeWeek = clampWeek(candidate.uiState?.activeWeek, DEFAULT_WEEK);
   const normalizedWeeks = [...candidate.weeklyPlan]
     .map((week) => normalizeWeek(week))
+    .filter(Boolean)
     .sort((a, b) => a.weekNumber - b.weekNumber);
 
   // Keep exactly one active week.
@@ -346,7 +723,7 @@ function hydrateState(candidate) {
     experimentLog: (candidate.experimentLog || []).map(normalizeExperiment),
     links: (candidate.links || []).map(normalizeLink),
     uiState: {
-      activeWeek: clampWeek(candidate.uiState?.activeWeek, 5),
+      activeWeek,
       sidebarCollapsed: !!candidate.uiState?.sidebarCollapsed,
       filters,
       expandedRows: {
@@ -355,6 +732,118 @@ function hydrateState(candidate) {
         experiments: { ...(candidate.uiState?.expandedRows?.experiments || {}) }
       },
       lastSavedAt: candidate.uiState?.lastSavedAt || null
+    },
+    _meta: candidate?._meta && typeof candidate._meta === 'object' ? { ...candidate._meta } : {}
+  };
+}
+
+function readingKey(item) {
+  return `${clampWeek(item.relatedWeek, DEFAULT_WEEK)}::${String(item.url || '').trim().toLowerCase()}`;
+}
+
+function buildReadingEntry(spec, existing = null) {
+  const createdAt = existing?.createdAt || nowISO();
+  return normalizeSource(
+    {
+      id: existing?.id || uid(),
+      createdAt,
+      updatedAt: existing?.updatedAt || createdAt,
+      title: spec.title,
+      author: '',
+      url: spec.url,
+      tags: Array.isArray(existing?.tags) ? existing.tags : [],
+      status: SOURCE_STATUSES.includes(existing?.status) ? existing.status : 'Unread',
+      notes: spec.notes,
+      isKey: !!existing?.isKey,
+      relatedWeek: spec.relatedWeek,
+      accessedDate: existing?.accessedDate || createdAt
+    },
+    spec.relatedWeek
+  );
+}
+
+function buildWeeklyPlanEntry(spec, existing = null) {
+  const createdAt = existing?.createdAt || nowISO();
+  const tasks = spec.tasks.map((task, index) => ({
+    id: existing?.tasks?.[index]?.id || uid(),
+    text: task.text,
+    milestone: task.milestone
+  }));
+  const milestones = spec.tasks.map((task, index) => ({
+    id: existing?.milestones?.[index]?.id || uid(),
+    text: task.milestone,
+    done: spec.status === 'Done'
+  }));
+
+  return normalizeWeek({
+    id: existing?.id || uid(),
+    createdAt,
+    updatedAt: existing?.updatedAt || createdAt,
+    weekNumber: spec.weekNumber,
+    status: spec.status,
+    owner: spec.owner,
+    planTitle: LEGACY_WEEKLY_PLAN_TITLE,
+    objective: spec.objective,
+    tasks,
+    milestones,
+    deliverables: spec.tasks.map((task) => task.milestone).join('; '),
+    risks: 'Scope boundaries',
+    timeBudget: spec.timeBudget,
+    aiCollaboration: spec.aiCollaboration,
+    scopeBoundaries: spec.scopeBoundaries,
+    contingency: spec.contingency
+  });
+}
+
+function buildReadingLibrary(existingItems = []) {
+  const existingByKey = new Map();
+  existingItems
+    .map((item) => normalizeSource(item))
+    .forEach((item) => {
+      const key = readingKey(item);
+      if (!existingByKey.has(key)) existingByKey.set(key, item);
+    });
+
+  const desiredKeys = new Set();
+  const desiredEntries = LEGACY_READING_LOG_ENTRIES.map((spec) => {
+    const key = readingKey(spec);
+    desiredKeys.add(key);
+    return buildReadingEntry(spec, existingByKey.get(key));
+  });
+
+  const customEntries = existingItems
+    .map((item) => normalizeSource(item))
+    .filter((item) => item && !LEGACY_MOCK_READING_URLS.has(item.url) && !desiredKeys.has(readingKey(item)));
+
+  return [...desiredEntries, ...customEntries];
+}
+
+function buildWeeklyPlan(existingWeeks = []) {
+  const weeksByNumber = new Map();
+  existingWeeks
+    .map((week) => normalizeWeek(week))
+    .filter(Boolean)
+    .forEach((week) => {
+      if (!weeksByNumber.has(week.weekNumber)) weeksByNumber.set(week.weekNumber, week);
+    });
+
+  return LEGACY_WEEKLY_PLAN_ENTRIES.map((spec) => buildWeeklyPlanEntry(spec, weeksByNumber.get(spec.weekNumber)));
+}
+
+function applyLegacyStaticContent(state) {
+  if (state?._meta?.legacyStaticContentVersion === LEGACY_STATIC_CONTENT_VERSION) return state;
+
+  return {
+    ...state,
+    readingLibrary: buildReadingLibrary(state.readingLibrary || []),
+    weeklyPlan: buildWeeklyPlan(state.weeklyPlan || []),
+    uiState: {
+      ...state.uiState,
+      activeWeek: LEGACY_STUDY_PLAN_ACTIVE_WEEK
+    },
+    _meta: {
+      ...(state._meta || {}),
+      legacyStaticContentVersion: LEGACY_STATIC_CONTENT_VERSION
     }
   };
 }
@@ -369,109 +858,8 @@ function debounce(fn, wait = 200) {
 
 function seedState() {
   const createdAt = nowISO();
-  const source1 = {
-    id: uid(),
-    createdAt,
-    updatedAt: createdAt,
-    title: 'Winning Culture in Elite Teams',
-    author: 'D. Collins',
-    url: 'https://example.com/winning-culture',
-    tags: ['culture', 'leadership'],
-    status: 'Synthesized',
-    notes: 'Strong section on accountability rituals and role clarity.',
-    isKey: true,
-    relatedWeek: 5,
-    accessedDate: createdAt
-  };
-  const source2 = {
-    id: uid(),
-    createdAt,
-    updatedAt: createdAt,
-    title: 'NFL Film Room: Pattern Recognition',
-    author: 'A. Ruiz',
-    url: 'https://example.com/patterns',
-    tags: ['patterns', 'signals'],
-    status: 'In Progress',
-    notes: 'Translate clip review cadence into weekly business reviews.',
-    isKey: true,
-    relatedWeek: 5,
-    accessedDate: createdAt
-  };
-  const source3 = {
-    id: uid(),
-    createdAt,
-    updatedAt: createdAt,
-    title: 'Habit Loops for High Performance',
-    author: 'S. Malik',
-    url: 'https://example.com/habit-loops',
-    tags: ['habits', 'nudges'],
-    status: 'Unread',
-    notes: '',
-    isKey: false,
-    relatedWeek: 6,
-    accessedDate: createdAt
-  };
-  const source4 = {
-    id: uid(),
-    createdAt,
-    updatedAt: createdAt,
-    title: 'Coaching Through Metrics',
-    author: 'L. Chen',
-    url: 'https://example.com/metrics',
-    tags: ['kpis', 'dashboard'],
-    status: 'Synthesized',
-    notes: 'Helped define scoreboard tiles.',
-    isKey: false,
-    relatedWeek: 7,
-    accessedDate: createdAt
-  };
-  const source5 = {
-    id: uid(),
-    createdAt,
-    updatedAt: createdAt,
-    title: 'Behavior Change in Teams',
-    author: 'M. Brooks',
-    url: 'https://example.com/behavior',
-    tags: ['behavior', 'review'],
-    status: 'In Progress',
-    notes: 'Map nudge frequency to practical check-ins.',
-    isKey: false,
-    relatedWeek: 8,
-    accessedDate: createdAt
-  };
-  const source6 = {
-    id: uid(),
-    createdAt,
-    updatedAt: createdAt,
-    title: 'From Playbook to Operating Rhythm',
-    author: 'R. Ortega',
-    url: 'https://example.com/playbook-rhythm',
-    tags: ['operations', 'weekly-loop'],
-    status: 'Archived',
-    notes: 'Archived but useful historical framing.',
-    isKey: false,
-    relatedWeek: 9,
-    accessedDate: createdAt
-  };
-
-  const weeklyPlan = [5, 6, 7, 8, 9, 10, 11].map((week, idx) => {
-    const cAt = nowISO();
-    return {
-      id: uid(),
-      createdAt: cAt,
-      updatedAt: cAt,
-      weekNumber: week,
-      status: week === 5 ? 'Active' : 'Planned',
-      owner: ['Riley', 'Ops Coach', 'AI Analyst'][idx % 3],
-      milestones: [
-        { id: uid(), text: `Define signal set for week ${week}`, done: idx === 0 },
-        { id: uid(), text: `Run coaching loop retro for week ${week}`, done: false },
-        { id: uid(), text: `Publish adjustments for week ${week + 1}`, done: false }
-      ],
-      deliverables: `Weekly coaching brief, KPI highlights, and recommended nudges for Week ${week}.`,
-      risks: `Risk: low source alignment and delayed stakeholder feedback in Week ${week}.`
-    };
-  });
+  const readingLibrary = buildReadingLibrary([]);
+  const weeklyPlan = buildWeeklyPlan([]);
 
   const prompt1 = {
     id: uid(),
@@ -483,8 +871,8 @@ function seedState() {
     outputSummary: 'Generated ranked standards with confidence levels.',
     changedNext: 'Added stricter evidence requirement to reduce generic advice.',
     tags: ['standards', 'evidence'],
-    relatedWeek: 5,
-    relatedSourceIds: [source1.id, source2.id]
+    relatedWeek: 1,
+    relatedSourceIds: [readingLibrary[0].id, readingLibrary[1].id]
   };
   const prompt2 = {
     id: uid(),
@@ -496,8 +884,8 @@ function seedState() {
     outputSummary: 'Produced alert matrix and threshold bands.',
     changedNext: 'Moved from static thresholds to moving averages.',
     tags: ['signals', 'kpi'],
-    relatedWeek: 6,
-    relatedSourceIds: [source4.id]
+    relatedWeek: 2,
+    relatedSourceIds: [readingLibrary[4].id]
   };
   const prompt3 = {
     id: uid(),
@@ -509,8 +897,8 @@ function seedState() {
     outputSummary: 'Role-specific nudges with timing recommendations.',
     changedNext: 'Added ownership labels and expected metric lift.',
     tags: ['nudges', 'roles'],
-    relatedWeek: 7,
-    relatedSourceIds: [source5.id]
+    relatedWeek: 3,
+    relatedSourceIds: [readingLibrary[7].id]
   };
   const prompt4 = {
     id: uid(),
@@ -522,8 +910,8 @@ function seedState() {
     outputSummary: 'Created concise action set with owners.',
     changedNext: 'Improved prompt by requiring risk level on each adjustment.',
     tags: ['review', 'adjust'],
-    relatedWeek: 8,
-    relatedSourceIds: [source3.id, source6.id]
+    relatedWeek: 4,
+    relatedSourceIds: [readingLibrary[10].id, readingLibrary[12].id]
   };
 
   const exp1 = {
@@ -538,7 +926,7 @@ function seedState() {
     imageUrls: ['https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=300&h=200&fit=crop'],
     notes: 'Best response when nudge included one concrete behavior and one metric.',
     tags: ['nudges', 'adoption'],
-    relatedWeek: 5
+    relatedWeek: 1
   };
   const exp2 = {
     id: uid(),
@@ -552,7 +940,7 @@ function seedState() {
     imageUrls: [],
     notes: '',
     tags: ['review', 'efficiency'],
-    relatedWeek: 6
+    relatedWeek: 2
   };
   const exp3 = {
     id: uid(),
@@ -566,7 +954,7 @@ function seedState() {
     imageUrls: ['https://invalid.example.com/nonexistent.png'],
     notes: 'Failure fallback tested for broken image URL.',
     tags: ['patterns', 'triage'],
-    relatedWeek: 7
+    relatedWeek: 3
   };
 
   const linkNow = nowISO();
@@ -590,13 +978,13 @@ function seedState() {
         'Track adoption and outcomes by week'
       ]
     },
-    readingLibrary: [source1, source2, source3, source4, source5, source6],
+    readingLibrary,
     weeklyPlan,
     promptLog: [prompt1, prompt2, prompt3, prompt4],
     experimentLog: [exp1, exp2, exp3],
     links,
     uiState: {
-      activeWeek: 5,
+      activeWeek: LEGACY_STUDY_PLAN_ACTIVE_WEEK,
       sidebarCollapsed: false,
       filters: defaultFilters(),
       expandedRows: {
@@ -605,6 +993,9 @@ function seedState() {
         experiments: {}
       },
       lastSavedAt: null
+    },
+    _meta: {
+      legacyStaticContentVersion: LEGACY_STATIC_CONTENT_VERSION
     }
   };
 }
@@ -642,12 +1033,17 @@ function loadState() {
   const parsed = safeParse(raw);
   if (!parsed || typeof parsed !== 'object' || !validateState(parsed)) {
     dataIssueDetected = true;
+    try {
+      localStorage.setItem(INVALID_BACKUP_STORAGE_KEY, raw);
+    } catch (_err) {
+      // Ignore backup failures and continue with demo data fallback.
+    }
     const seeded = seedState();
     saveState(seeded, { silent: true });
     return seeded;
   }
 
-  const hydrated = hydrateState(parsed);
+  const hydrated = applyLegacyStaticContent(hydrateState(parsed));
   saveState(hydrated, { silent: true });
   return hydrated;
 }
@@ -735,10 +1131,10 @@ function setFilterValue(filterKey, value) {
   if (filterKey === 'readingSort') f.reading.sort = normalizeReadingSort(String(value || 'updatedAt'));
   if (filterKey === 'promptSearch') f.prompts.query = String(value || '');
   if (filterKey === 'promptModel') f.prompts.model = String(value || 'All');
-  if (filterKey === 'promptWeek') f.prompts.week = String(value || 'All');
+  if (filterKey === 'promptWeek') f.prompts.week = normalizeWeekFilter(value);
   if (filterKey === 'promptTag') f.prompts.tag = String(value || 'All');
   if (filterKey === 'experimentSearch') f.experiments.query = String(value || '');
-  if (filterKey === 'experimentWeek') f.experiments.week = String(value || 'All');
+  if (filterKey === 'experimentWeek') f.experiments.week = normalizeWeekFilter(value);
   if (filterKey === 'experimentTag') f.experiments.tag = String(value || 'All');
 }
 
@@ -877,7 +1273,7 @@ function renderReading() {
   const weeks = sourceWeekOptions();
 
   readingEl.innerHTML = `
-    <h2 class="section-title">Reading Library</h2>
+    <h2 class="section-title">${LEGACY_READING_LOG_TITLE}</h2>
     <div class="table-toolbar">
       <button type="button" data-action="reading-add">Add Source</button>
       <input type="text" placeholder="Search title/author/notes" value="${escapeAttr(f.query)}" data-filter="readingSearch" />
@@ -886,7 +1282,7 @@ function renderReading() {
       <label class="pill"><input type="checkbox" data-filter="readingKeyOnly" ${f.keyOnly ? 'checked' : ''}/> Key Only</label>
       <select data-filter="readingSort">
         <option value="manual" ${f.sort === 'manual' ? 'selected' : ''}>Sort: manual</option>
-        <option value="relatedWeek" ${f.sort === 'relatedWeek' ? 'selected' : ''}>Sort: week 5-11</option>
+        <option value="relatedWeek" ${f.sort === 'relatedWeek' ? 'selected' : ''}>Sort: week 1-6</option>
         <option value="title" ${f.sort === 'title' ? 'selected' : ''}>Sort: title</option>
         <option value="author" ${f.sort === 'author' ? 'selected' : ''}>Sort: author</option>
         <option value="status" ${f.sort === 'status' ? 'selected' : ''}>Sort: status</option>
@@ -931,7 +1327,7 @@ function renderReading() {
 
 function renderWeekly() {
   weeklyEl.innerHTML = `
-    <h2 class="section-title">Weekly Plan</h2>
+    <h2 class="section-title">${escapeHtml(LEGACY_WEEKLY_PLAN_TITLE)}</h2>
     <div class="week-grid">
       ${state.weeklyPlan
         .sort((a, b) => a.weekNumber - b.weekNumber)
@@ -945,10 +1341,35 @@ function renderWeekly() {
                 <span class="badge">Week ${w.weekNumber}</span>
                 <span class="pill">${w.status}</span>
               </div>
+              <p class="card-preview"><strong>Objective:</strong> ${escapeHtml(w.objective || '-')}</p>
               <p><strong>Owner:</strong> ${escapeHtml(w.owner || '-')}</p>
               <div class="progress"><span style="width:${pct}%"></span></div>
+              <p class="card-preview"><strong>Time Budget:</strong> ${escapeHtml(w.timeBudget || '-')}</p>
               <p class="card-preview"><strong>Deliverables:</strong> ${escapeHtml((w.deliverables || '').slice(0, 120))}</p>
               <p class="card-preview"><strong>Risks:</strong> ${escapeHtml((w.risks || '').slice(0, 120))}</p>
+              <details>
+                <summary>Tasks (${w.tasks.length || 0})</summary>
+                <ul>
+                  ${w.tasks.map((task) => `<li>${escapeHtml(task.text)}${task.milestone ? ` -> ${escapeHtml(task.milestone)}` : ''}</li>`).join('')}
+                </ul>
+              </details>
+              <details>
+                <summary>Milestones (${done}/${total})</summary>
+                <ul>
+                  ${w.milestones.map((milestone) => `<li>${milestone.done ? '[x]' : '[ ]'} ${escapeHtml(milestone.text)}</li>`).join('')}
+                </ul>
+              </details>
+              <details>
+                <summary>AI Collaboration</summary>
+                <p>${escapeHtml(w.aiCollaboration || 'None')}</p>
+              </details>
+              <details>
+                <summary>Scope Boundaries</summary>
+                <ul>
+                  ${w.scopeBoundaries.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+                </ul>
+              </details>
+              <p class="card-preview"><strong>Contingency:</strong> ${escapeHtml(w.contingency || '-')}</p>
               <div class="week-actions">
                 <button data-action="week-edit" data-id="${w.id}" type="button">View/Edit</button>
                 <button data-action="week-set-active" data-id="${w.id}" type="button">Set Active</button>
@@ -1006,7 +1427,7 @@ function renderPrompts() {
                   ${inlineCell('prompt', p.id, 'date', p.date.slice(0, 10), 'date')}
                   ${inlineCell('prompt', p.id, 'model', p.model, 'select', [...new Set([...MODEL_OPTIONS.filter((m) => m !== 'Other'), p.model])] )}
                   ${inlineCell('prompt', p.id, 'outputSummary', p.outputSummary, 'textarea')}
-                  ${inlineCell('prompt', p.id, 'relatedWeek', String(p.relatedWeek), 'select', ['5', '6', '7', '8', '9', '10', '11'])}
+                  ${inlineCell('prompt', p.id, 'relatedWeek', String(p.relatedWeek), 'select', WEEK_RANGE.map(String))}
                   ${inlineCell('prompt', p.id, 'tags', p.tags.join(', '), 'tags')}
                   <td>
                     <div class="action-row">
@@ -1127,9 +1548,8 @@ function renderSidebarState() {
   sidebarEl.querySelector('#sidebarToggle').textContent = state.uiState.sidebarCollapsed ? 'Expand' : 'Collapse';
 }
 
-function syncActiveNav() {
+function syncActiveNav(hash = window.location.hash || '#overview') {
   const links = sidebarEl.querySelectorAll('nav a[href^="#"]');
-  const hash = window.location.hash || '#overview';
   links.forEach((link) => {
     const isActive = link.getAttribute('href') === hash;
     link.classList.toggle('is-active', isActive);
@@ -1141,6 +1561,20 @@ function syncActiveNav() {
 function syncTopbarOffset() {
   const height = Math.ceil(topbarEl.getBoundingClientRect().height || topbarEl.offsetHeight || 78);
   document.documentElement.style.setProperty('--topbar-height', `${height}px`);
+}
+
+function scrollSectionHeadingIntoView(hash, behavior = 'auto') {
+  if (!hash || hash === '#') return;
+
+  const section = document.querySelector(hash);
+  if (!section) return;
+
+  syncTopbarOffset();
+
+  const heading = section.querySelector('.section-title') || section;
+  const offset = Math.ceil(topbarEl.getBoundingClientRect().height || topbarEl.offsetHeight || 78);
+  const top = Math.max(window.scrollY + heading.getBoundingClientRect().top - offset - 8, 0);
+  window.scrollTo({ top, behavior });
 }
 
 function renderAll() {
@@ -1420,7 +1854,7 @@ function openReadingModal(item = null) {
       status: SOURCE_STATUSES[0],
       notes: '',
       isKey: false,
-      relatedWeek: clampWeek(state.uiState.activeWeek, 5),
+      relatedWeek: clampWeek(state.uiState.activeWeek, DEFAULT_WEEK),
       accessedDate: nowISO(),
       ...(item || {})
     };
@@ -1452,7 +1886,7 @@ function openReadingModal(item = null) {
     submit: (form) => {
       const fd = new FormData(form);
       const url = (fd.get('url') || '').toString().trim();
-      const relatedWeek = clampWeek(fd.get('relatedWeek'), state.uiState.activeWeek || 5);
+      const relatedWeek = clampWeek(fd.get('relatedWeek'), state.uiState.activeWeek || DEFAULT_WEEK);
       const title = (fd.get('title') || '').toString().trim() || sourceTitleFallback(url);
       if (!url) {
         toast('URL is required', 'error');
@@ -1484,10 +1918,31 @@ function makeWeekDraft(week) {
   return {
     owner: week.owner || '',
     status: week.status || 'Planned',
+    objective: week.objective || '',
+    tasks: Array.isArray(week.tasks) ? week.tasks.map((task) => ({ id: task.id, text: task.text, milestone: task.milestone || '' })) : [],
     deliverables: week.deliverables || '',
     risks: week.risks || '',
+    timeBudget: week.timeBudget || '',
+    aiCollaboration: week.aiCollaboration || '',
+    scopeBoundaries: Array.isArray(week.scopeBoundaries) ? [...week.scopeBoundaries] : [],
+    contingency: week.contingency || '',
     milestones: week.milestones.map((m) => ({ id: m.id, text: m.text, done: !!m.done }))
   };
+}
+
+function renderTaskDraftLines(tasks = []) {
+  return tasks.map((task) => `${task.text}${task.milestone ? ` -> ${task.milestone}` : ''}`).join('\n');
+}
+
+function parseTaskDraft(text, previous = []) {
+  return splitLines(text).map((line, index) => {
+    const [taskText, ...milestoneParts] = line.split('->');
+    return {
+      id: previous[index]?.id || uid(),
+      text: taskText.trim(),
+      milestone: milestoneParts.join('->').trim()
+    };
+  });
 }
 
 function openWeekModal(week, incomingDraft = null) {
@@ -1501,6 +1956,16 @@ function openWeekModal(week, incomingDraft = null) {
       <form class="modal-grid" data-form="week">
         <label>Owner <input name="owner" value="${escapeAttr(draft.owner || '')}" /></label>
         <label>Status <select name="status">${WEEK_STATUSES.map((s) => `<option ${s === draft.status ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+        <label>Objective <textarea name="objective">${escapeHtml(draft.objective || '')}</textarea></label>
+        <label>Tasks (one per line, optional "Task -> Milestone")
+          <textarea name="tasks">${escapeHtml(renderTaskDraftLines(draft.tasks))}</textarea>
+        </label>
+        <label>Time Budget <textarea name="timeBudget">${escapeHtml(draft.timeBudget || '')}</textarea></label>
+        <label>AI Collaboration <textarea name="aiCollaboration">${escapeHtml(draft.aiCollaboration || '')}</textarea></label>
+        <label>Scope Boundaries (one per line)
+          <textarea name="scopeBoundaries">${escapeHtml((draft.scopeBoundaries || []).join('\n'))}</textarea>
+        </label>
+        <label>Contingency <textarea name="contingency">${escapeHtml(draft.contingency || '')}</textarea></label>
         <label>Deliverables <textarea name="deliverables">${escapeHtml(draft.deliverables || '')}</textarea></label>
         <label>Risks <textarea name="risks">${escapeHtml(draft.risks || '')}</textarea></label>
         <div>
@@ -1536,6 +2001,12 @@ function openWeekModal(week, incomingDraft = null) {
       commit(() => {
         week.owner = (fd.get('owner') || '').toString();
         week.status = nextStatus;
+        week.objective = (fd.get('objective') || '').toString();
+        week.tasks = parseTaskDraft((fd.get('tasks') || '').toString(), nextDraft.tasks);
+        week.timeBudget = (fd.get('timeBudget') || '').toString();
+        week.aiCollaboration = (fd.get('aiCollaboration') || '').toString();
+        week.scopeBoundaries = splitLines((fd.get('scopeBoundaries') || '').toString());
+        week.contingency = (fd.get('contingency') || '').toString();
         week.deliverables = (fd.get('deliverables') || '').toString();
         week.risks = (fd.get('risks') || '').toString();
         week.milestones = nextDraft.milestones.map((m) => ({ id: m.id, text: m.text, done: !!m.done }));
@@ -1595,7 +2066,7 @@ function openPromptModal(item = null) {
       <form class="modal-grid" data-form="prompt">
         <div class="modal-grid two">
           <label>Date <input type="date" name="date" value="${escapeAttr(p.date.slice(0, 10))}" /></label>
-          <label>Week <select name="relatedWeek">${[5, 6, 7, 8, 9, 10, 11].map((w) => `<option value="${w}" ${w === p.relatedWeek ? 'selected' : ''}>${w}</option>`).join('')}</select></label>
+          <label>Week <select name="relatedWeek">${WEEK_RANGE.map((w) => `<option value="${w}" ${w === p.relatedWeek ? 'selected' : ''}>${w}</option>`).join('')}</select></label>
         </div>
         <label>Model <select name="model" data-action="model-select">${MODEL_OPTIONS.map((m) => `<option ${m === (customModel ? 'Other' : p.model) ? 'selected' : ''}>${m}</option>`).join('')}</select></label>
         <label class="${customModel ? '' : 'hidden'}" data-other-model-wrap>Custom model <input name="customModel" value="${escapeAttr(customModel)}"/></label>
@@ -1627,7 +2098,7 @@ function openPromptModal(item = null) {
         p.outputSummary = (fd.get('outputSummary') || '').toString();
         p.changedNext = (fd.get('changedNext') || '').toString();
         p.tags = parseTags((fd.get('tags') || '').toString());
-        p.relatedWeek = Number(fd.get('relatedWeek') || 5);
+        p.relatedWeek = clampWeek(fd.get('relatedWeek'), DEFAULT_WEEK);
         p.relatedSourceIds = [...form.querySelector('[name="relatedSourceIds"]').selectedOptions].map((o) => o.value);
         ensureUpdated(p);
         if (isNew) state.promptLog.unshift(p);
@@ -1663,7 +2134,7 @@ function openExperimentModal(item = null) {
           <label>Title <input name="title" value="${escapeAttr(e.title)}" required /></label>
           <label>Date <input type="date" name="date" value="${escapeAttr(e.date.slice(0, 10))}" /></label>
         </div>
-        <label>Week <select name="relatedWeek">${[5, 6, 7, 8, 9, 10, 11].map((w) => `<option value="${w}" ${w === e.relatedWeek ? 'selected' : ''}>${w}</option>`).join('')}</select></label>
+        <label>Week <select name="relatedWeek">${WEEK_RANGE.map((w) => `<option value="${w}" ${w === e.relatedWeek ? 'selected' : ''}>${w}</option>`).join('')}</select></label>
         <label>Tags <input name="tags" value="${escapeAttr(e.tags.join(', '))}"/></label>
         <label>What I tried <textarea name="whatITried">${escapeHtml(e.whatITried)}</textarea></label>
         <label>Outcome <textarea name="outcome">${escapeHtml(e.outcome)}</textarea></label>
@@ -1686,7 +2157,7 @@ function openExperimentModal(item = null) {
       commit(() => {
         e.title = title;
         e.date = toISO((fd.get('date') || '').toString(), nowISO());
-        e.relatedWeek = Number(fd.get('relatedWeek') || 5);
+        e.relatedWeek = clampWeek(fd.get('relatedWeek'), DEFAULT_WEEK);
         e.tags = parseTags((fd.get('tags') || '').toString());
         e.whatITried = (fd.get('whatITried') || '').toString();
         e.outcome = (fd.get('outcome') || '').toString();
@@ -2016,6 +2487,18 @@ function onAppClick(event) {
     return;
   }
 
+  const anchor = event.target.closest('a[href^="#"]');
+  if (anchor) {
+    const hash = anchor.getAttribute('href');
+    if (hash && hash !== '#' && document.querySelector(hash)) {
+      event.preventDefault();
+      window.history.pushState(null, '', hash);
+      syncActiveNav(hash);
+      scrollSectionHeadingIntoView(hash, 'smooth');
+      return;
+    }
+  }
+
   const actionEl = event.target.closest('[data-action]');
   if (actionEl) {
     if (actionEl.id === 'sidebarToggle') actionEl.dataset.action = 'sidebar-toggle';
@@ -2281,7 +2764,18 @@ function init() {
   document.addEventListener('drop', onAppDrop);
   document.addEventListener('dragend', onAppDragEnd);
   window.addEventListener('resize', syncTopbarOffsetDebounced);
-  window.addEventListener('hashchange', syncActiveNav);
+  window.addEventListener('hashchange', () => {
+    syncActiveNav();
+    scrollSectionHeadingIntoView(window.location.hash, 'auto');
+  });
+  window.addEventListener('popstate', () => {
+    syncActiveNav();
+    scrollSectionHeadingIntoView(window.location.hash, 'auto');
+  });
+
+  if (window.location.hash) {
+    window.requestAnimationFrame(() => scrollSectionHeadingIntoView(window.location.hash, 'auto'));
+  }
 }
 
 init();
